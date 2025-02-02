@@ -26,4 +26,4 @@ jobs:
         working-directory: ./app
 
       - name: Push the Docker Image
-        run: docker push ${{ secrets.CONTAINER_REGISTRY_ENDPOINT }}/my-nginx:latest
+        run: docker push $CONTAINER_REGISTRY_ENDPOINT/my-nginx:latest
