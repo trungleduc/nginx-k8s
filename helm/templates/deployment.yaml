@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-test-deployment
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: nginx-test-deployment
+  template:
+    metadata:
+      labels:
+        app: nginx-test-deployment
+    spec:
+      containers:
+        - name: odex-api-deployment
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          ports:
+          - containerPort: 80
