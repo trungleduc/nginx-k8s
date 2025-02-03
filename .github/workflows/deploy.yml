@@ -5,7 +5,7 @@ on:
     branches:
       - main
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     environment: "dev"
     env:
@@ -21,9 +21,60 @@ jobs:
           password: ${{ secrets.SCALEWAY_SECRET_KEY }}
           registry: ${{ env.CONTAINER_REGISTRY_ENDPOINT }}
 
+      - name: Check if image already exists
+        id: check-image
+        run: |
+          IMAGE_TAG="$CONTAINER_REGISTRY_ENDPOINT/my-nginx:latest"
+          if docker manifest inspect $IMAGE_TAG > /dev/null 2>&1; then
+            echo "Image already exists, skipping build."
+            echo "skip_build=true" >> $GITHUB_ENV
+          fi
+
       - name: Build the Docker image
+        if: env.skip_build != 'true'
         run: docker build . -t $CONTAINER_REGISTRY_ENDPOINT/my-nginx:latest
         working-directory: ./app
 
       - name: Push the Docker Image
+        if: env.skip_build != 'true'
         run: docker push $CONTAINER_REGISTRY_ENDPOINT/my-nginx:latest
+
+  helm-upgrade:
+    runs-on: ubuntu-latest
+    environment: "dev"
+    needs: build
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v3
+
+      - name: Install helm
+        uses: azure/setup-helm@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Authenticate with Scaleway
+        uses: scaleway/action-scw@v0
+        with:
+          access-key: ${{ secrets.SCALEWAY_ACCESS_KEY }}
+          secret-key: ${{ secrets.SCALEWAY_SECRET_KEY }}
+          default-project-id: ${{ secrets.SCALEWAY_PROJECT_ID }}
+
+      - name: Fetch Kubeconfig from Scaleway Secret Manager
+        run: |
+          SECRET_NAME="KUBECONFIG_${{ vars.ENV_NAME }}_cluster"
+          KUBECONFIG_CONTENT=$(scw secret version get latest ${SECRET_NAME} --output=json | jq -r '.data[0].value')
+          echo "$KUBECONFIG_CONTENT" > kubeconfig.yaml
+          echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
+
+      - name: Update Helm chart template
+        uses: cschleiden/replace-tokens@v1
+        with:
+          files: '["helm/values.yaml"]'
+        env:
+          SCALEWAY_REGION: ${{ vars.SCALEWAY_REGION }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+
+      - name: Update Helm chart
+        run: |
+          helm upgrade --install my-nginx ./helm
