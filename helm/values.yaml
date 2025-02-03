@@ -8,8 +8,9 @@ image:
 imagePullSecrets: scaleway-container-registry-secret
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 80
+  targetPort: 80
 
 
 ingress:
