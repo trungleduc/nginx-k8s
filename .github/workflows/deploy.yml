@@ -53,6 +53,14 @@ jobs:
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Update Helm chart template
+        uses: cschleiden/replace-tokens@v1
+        with:
+          files: '["helm/values.yaml"]'
+        env:
+          SCALEWAY_REGION: ${{ vars.SCALEWAY_REGION }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+
       - name: Authenticate with Scaleway
         uses: scaleway/action-scw@v0
         with:
@@ -74,13 +82,6 @@ jobs:
           echo "$KUBECONFIG_BASE64" | base64 --decode > kubeconfig.yaml
           echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
 
-      - name: Update Helm chart template
-        uses: cschleiden/replace-tokens@v1
-        with:
-          files: '["helm/values.yaml"]'
-        env:
-          SCALEWAY_REGION: ${{ vars.SCALEWAY_REGION }}
-          ENV_NAME: ${{ vars.ENV_NAME }}
 
       - name: Update Helm chart
         run: |

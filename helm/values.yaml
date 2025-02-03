@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: rg.{{SCALEWAY_REGION}}.scw.cloud/${{ENV_NAME}}_container_registry/my-nginx
+  repository: rg.#{SCALEWAY_REGION}#.scw.cloud/#{ENV_NAME}#_container_registry/my-nginx
   pullPolicy: IfNotPresent
   tag: latest
 
