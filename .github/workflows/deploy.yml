@@ -56,14 +56,21 @@ jobs:
       - name: Authenticate with Scaleway
         uses: scaleway/action-scw@v0
         with:
+          save-config: true
+          export-config: true
           access-key: ${{ secrets.SCALEWAY_ACCESS_KEY }}
           secret-key: ${{ secrets.SCALEWAY_SECRET_KEY }}
           default-project-id: ${{ secrets.SCALEWAY_PROJECT_ID }}
+          default-organization-id: ${{ secrets.SCALEWAY_ORGANIZATION_ID }}
 
       - name: Fetch Kubeconfig from Scaleway Secret Manager
         run: |
           SECRET_NAME="KUBECONFIG_${{ vars.ENV_NAME }}_cluster"
-          KUBECONFIG_CONTENT=$(scw secret version get latest ${SECRET_NAME} --output=json | jq -r '.data[0].value')
+
+          LATEST_REVISION=$(scw secret version list ${SECRET_NAME} --output=json | jq -r '.[0].revision')
+
+          KUBECONFIG_CONTENT=$(scw secret version get ${SECRET_NAME} ${LATEST_REVISION} --output=json | jq -r '.data[0].value')
+          
           echo "$KUBECONFIG_CONTENT" > kubeconfig.yaml
           echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
 
