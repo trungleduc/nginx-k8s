@@ -66,12 +66,12 @@ jobs:
       - name: Fetch Kubeconfig from Scaleway Secret Manager
         run: |
           SECRET_NAME="KUBECONFIG_${{ vars.ENV_NAME }}_cluster"
-
-          LATEST_REVISION=$(scw secret version list ${SECRET_NAME} --output=json | jq -r '.[0].revision')
-
-          KUBECONFIG_CONTENT=$(scw secret version get ${SECRET_NAME} ${LATEST_REVISION} --output=json | jq -r '.data[0].value')
-          
-          echo "$KUBECONFIG_CONTENT" > kubeconfig.yaml
+          KUBECONFIG_BASE64=$(scw secret version access-by-path secret-name="$SECRET_NAME" revision=1 --output=json | jq -r '.data')
+          if [[ -z "$KUBECONFIG_BASE64" ]]; then
+            echo "Error: No value found for secret $SECRET_NAME"
+            exit 1
+          fi
+          echo "$KUBECONFIG_BASE64" | base64 --decode > kubeconfig.yaml
           echo "KUBECONFIG=$(pwd)/kubeconfig.yaml" >> $GITHUB_ENV
 
       - name: Update Helm chart template
